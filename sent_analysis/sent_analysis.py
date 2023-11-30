@@ -193,28 +193,20 @@ def main():
     for i in big_email_data["Language"]:
         lang_from_code.append(lang_map[i])
     big_email_data["Original Language"] = lang_from_code
-
-    
-
     model = Model("/scratchj/ehealth/Education/models/indic-en-preprint/fairseq_model", model_type="fairseq")
     languages = big_email_data["Language"]
     clean_feedback_text = big_email_data["Cleaned Text"]
     tgt_lang = "eng_Latn"
-
     outputs = []
-
     for idx in tqdm(range(len(clean_feedback_text))):
         if languages[idx] == "eng_Latn":
             outputs.append(clean_feedback_text[idx])
         else:
             text = clean_feedback_text[idx]
             src_lang = languages[idx]
-            N = 25  # You can change this value to the desired number of words per chunk
-            # Split the sentence into words
+            N = 25  
             words = text.split()
-            # Initialize an empty list to store the smaller chunks
             chunks = []
-            # Loop through the words and group them into chunks of N words each
             for i in range(0, len(words), N):
                 chunk = " ".join(words[i:i+N])
                 chunks.append(chunk)
@@ -327,6 +319,5 @@ def main():
             pass
     big_email_data["Verdict"] = decision
     big_email_data.to_json("/home/users/kinjals/work_dir/check/master_hineng_cleaned_with_sent.json", orient='records')
-# Call the main function
 if __name__ == "__main__":
     main()
