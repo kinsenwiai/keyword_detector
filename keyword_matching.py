@@ -1,0 +1,552 @@
+import pandas as pd
+import string
+from tqdm import tqdm
+
+spell_correction = {'inheritance': 'inheritance',
+ 'inheritence': 'inheritance',
+ 'heritance': 'inheritance',
+ 'inhertance': 'inheritance',
+ 'inheritances': 'inheritance',
+ 'inheritant': 'inheritance',
+ 'inheretance': 'inheritance',
+ 'inheritane': 'inheritance',
+ 'heritence': 'inheritance',
+ 'inheritace': 'inheritance',
+ 'inhenritence': 'inheritance',
+ 'inhertience': 'inheritance',
+ 'inherence': 'inheritance',
+ 'inheritent': 'inheritance',
+ 'inheretence': 'inheritance',
+ 'inheritancy': 'inheritance',
+ 'herittance': 'inheritance',
+ 'inheritans': 'inheritance',
+ 'marriage': 'marriage',
+ 'marriages': 'marriage',
+ 'marrige': 'marriage',
+ 'marriges': 'marriage',
+ 'mariage': 'marriage',
+ 'marrage': 'marriage',
+ 'marriege': 'marriage',
+ 'mariages': 'marriage',
+ 'maariages': 'marriage',
+ 'marraiage': 'marriage',
+ 'remarriages': 'marriage',
+ 'maarriages': 'marriage',
+ 'marrege': 'marriage',
+ 'marrigae': 'marriage',
+ 'remarrige': 'marriage',
+ 'marreige': 'marriage',
+ 'martiage': 'marriage',
+ 'marriaged': 'marriage',
+ 'marragie': 'marriage',
+ 'marrages': 'marriage',
+ 'marrriage': 'marriage',
+ 'succession': 'succession',
+ 'succesion': 'succession',
+ 'successions': 'succession',
+ 'sucession': 'succession',
+ 'successors': 'succession',
+ 'successors”': 'succession',
+ 'successiin': 'succession',
+ 'sugessions': 'succession',
+ 'suceession': 'succession',
+ 'divorce': 'divorce',
+ 'divorced': 'divorce',
+ 'divorces': 'divorce',
+ 'divorcee': 'divorce',
+ 'divorcees': 'divorce',
+ 'divoce': 'divorce',
+ 'divroce': 'divorce',
+ '≈divorce': 'divorce',
+ 'divoirce': 'divorce',
+ 'divocrce': 'divorce',
+ 'divorece': 'divorce',
+ 'diviorce': 'divorce',
+ 'udivorce': 'divorce',
+ 'divoces': 'divorce',
+ 'divirce': 'divorce',
+ 'divores': 'divorce',
+ 'maintenance': 'maintenance',
+ 'maintainance': 'maintenance',
+ 'maintainence': 'maintenance',
+ 'maintance': 'maintenance',
+ 'maintenence': 'maintenance',
+ 'maintenace': 'maintenance',
+ 'maintanence': 'maintenance',
+ '“maintenance': 'maintenance',
+ 'maintenance”': 'maintenance',
+ 'maintanance': 'maintenance',
+ 'maintaince': 'maintenance',
+ 'maitenance': 'maintenance',
+ 'maintatance': 'maintenance',
+ 'maintanace': 'maintenance',
+ 'mainatainance': 'maintenance',
+ 'maintainece': 'maintenance',
+ 'maintrmanace': 'maintenance',
+ 'maintenenace': 'maintenance',
+ 'manitainance': 'maintenance',
+ 'maintenennce': 'maintenance',
+ 'maintan': 'maintenance',
+ 'maintencance': 'maintenance',
+ 'maintananceand': 'maintenance',
+ 'mantinanc': 'maintenance',
+ 'maintaiance': 'maintenance',
+ 'gift': 'gifts',
+ 'gifts': 'gifts',
+ 'hiba': 'hiba',
+ 'hib': 'hiba',
+ 'custody': 'custody',
+ 'guardian': 'guardian',
+ 'guardians': 'guardian',
+ 'gardian': 'guardian',
+ 'gaurdian': 'guardian',
+ 'gauradian': 'guardian',
+ 'guarding': 'guardian',
+ 'ward': 'ward',
+ 'sharia': 'shariat',
+ 'shariah': 'shariat',
+ 'shariat': 'shariat',
+ 'shariya': 'shariat',
+ 'shariyat': 'shariat',
+ 'sariya': 'shariat',
+ 'sariyat': 'shariat',
+ 'shariath': 'shariat',
+ 'saria': 'shariat',
+ 'sharyat': 'shariat',
+ 'sariah': 'shariat',
+ 'shariaya': 'shariat',
+ 'shari': 'shariat',
+ 'sharath': 'shariat',
+ 'sariba': 'shariat',
+ 'sharif': 'shariat',
+ 'sharya': 'shariat',
+ 'sariath': 'shariat',
+ 'shriah': 'shariat',
+ 'sariyah': 'shariat',
+ 'shariyah': 'shariat',
+ 'shariyaat': 'shariat',
+ 'quran': 'quran',
+ 'uran': 'quran',
+ 'quoran': 'quran',
+ '“quran': 'quran',
+ 'quaran': 'quran',
+ 'puran': 'quran',
+ 'quraan': 'quran',
+ 'personal': 'personal',
+ 'personals': 'personal',
+ 'personnal': 'personal',
+ 'persnal': 'personal',
+ 'personl': 'personal',
+ 'personalâ': 'personal',
+ 'persona': 'personal',
+ 'personnl': 'personal',
+ 'lpersonal': 'personal',
+ 'personla': 'personal',
+ 'peronal': 'personal',
+ 'peersonal': 'personal',
+ 'pesonal': 'personal',
+ 'persanal': 'personal',
+ 'personàl': 'personal',
+ 'personly': 'personal',
+ 'personaly': 'personal',
+ 'laws': 'law',
+ 'law': 'law',
+ 'flaws': 'law',
+ 'law’': 'law',
+ 'law”': 'law',
+ 'lawas': 'law',
+ 'las': 'law',
+ 'aws': 'law',
+ 'flaw': 'law',
+ 'laws’': 'law',
+ 'alas': 'law',
+ 'laus': 'law',
+ 'walas': 'law',
+ 'lash': 'law',
+ 'lawa': 'law',
+ 'lawsâ': 'law',
+ 'leash': 'law',
+ 'lalus': 'law',
+ 'talas': 'law',
+ 'lawis': 'law',
+ 'lawns': 'law',
+ 'taws': 'law',
+ 'lwas': 'law',
+ 'laways': 'law',
+ 'lavs': 'law',
+ 'lavis': 'law',
+ 'lams': 'law',
+ 'almas': 'law',
+ 'larwa': 'law',
+ 'slash': 'law',
+ 'llaw': 'law',
+ 'lawys': 'law',
+ 'article': 'article',
+ 'articles': 'article',
+ 'artical': 'article',
+ '“article': 'article',
+ 'aritcle': 'article',
+ 'articl': 'article',
+ 'artice': 'article',
+ 'article15': 'article',
+ 'article44': 'article',
+ 'arctile': 'article',
+ 'aticle': 'article',
+ 'aritcal': 'article',
+ 'article26': 'article',
+ 'parctices': 'article',
+ 'pracice': 'article',
+ 'articales': 'article',
+ 'marrital': 'article',
+ 'ariticle': 'article',
+ 'pracrices': 'article',
+ 'prectices': 'article',
+ 'arricle': 'article',
+ 'practicae': 'article',
+ 'pratcie': 'article',
+ 'pratctice': 'article',
+ 'articlee': 'article',
+ 'article25': 'article',
+ 'article14': 'article',
+ '14': '14',
+ 'constitution': 'constitution',
+ 'constitutional': 'constitution',
+ 'unconstitutional': 'constitution',
+ 'constitutionally': 'constitution',
+ 'constitutions': 'constitution',
+ 'constitution’s': 'constitution',
+ 'constituion': 'constitution',
+ 'consitution': 'constitution',
+ 'constitutionality': 'constitution',
+ 'constituition': 'constitution',
+ 'constituation': 'constitution',
+ 'constituting': 'constitution',
+ 'contitution': 'constitution',
+ 'constition': 'constitution',
+ 'consititution': 'constitution',
+ 'constitutionalâ': 'constitution',
+ 'costitution': 'constitution',
+ 'constituional': 'constitution',
+ 'constituitional': 'constitution',
+ 'constitutioin': 'constitution',
+ 'constitutionly': 'constitution',
+ 'constiution': 'constitution',
+ 'constitutionalism': 'constitution',
+ 'constitutiin': 'constitution',
+ 'constituiton': 'constitution',
+ 'unconstitution': 'constitution',
+ 'constitiution': 'constitution',
+ 'constititution': 'constitution',
+ 'contituition': 'constitution',
+ 'cobsitution': 'constitution',
+ '‘constitutionality’': 'constitution',
+ 'constitutiion': 'constitution',
+ 'constituinal': 'constitution',
+ 'comstitutional': 'constitution',
+ 'constuitutional': 'constitution',
+ 'constuction': 'constitution',
+ 'constitutiton': 'constitution',
+ 'unconstitutionally': 'constitution',
+ 'unconsitutional': 'constitution',
+ 'constitutation': 'constitution',
+ 'constitunal': 'constitution',
+ 'constutution': 'constitution',
+ 'counsitution': 'constitution',
+ 'constiation': 'constitution',
+ 'consitituon': 'constitution',
+ 'constitutuion': 'constitution',
+ 'consitituion': 'constitution',
+ 'constitutio': 'constitution',
+ 'constitituion': 'constitution',
+ 'constitutiona': 'constitution',
+ 'constitutioal': 'constitution',
+ 'unconstituinally': 'constitution',
+ 'constitution”': 'constitution',
+ 'constutition': 'constitution',
+ 'constititional': 'constitution',
+ 'constitition': 'constitution',
+ 'constitusion': 'constitution',
+ 'constution': 'constitution',
+ 'constituionally': 'constitution',
+ 'constituton': 'constitution',
+ 'gender': 'gender',
+ 'genders': 'gender',
+ 'geneders': 'gender',
+ 'gende': 'gender',
+ 'gensder': 'gender',
+ 'gendre': 'gender',
+ 'equality': 'equality',
+ 'quality': 'equality',
+ 'eqality': 'equality',
+ 'equallity': 'equality',
+ 'euality': 'equality',
+ 'euallity': 'equality',
+ 'equaliy': 'equality',
+ 'equaity': 'equality',
+ 'equalily': 'equality',
+ 'equaly': 'equality',
+ 'eqaulity': 'equality',
+ 'equlaity': 'equality',
+ 'equiality': 'equality',
+ 'equility': 'equality',
+ 'eqiality': 'equality',
+ 'adoption': 'adoption',
+ 'adoptions': 'adoption',
+ 'adption': 'adoption',
+ 'addoption': 'adoption',
+ 'adoptations': 'adoption',
+ 'child': 'child',
+ 'childs': 'child',
+ 'child’s': 'child',
+ '2child': 'child',
+ 'chaild': 'child',
+ 'discrimination': 'discrimination',
+ 'discriminating': 'discrimination',
+ 'discriminations': 'discrimination',
+ 'descrimination': 'discrimination',
+ 'discremination': 'discrimination',
+ 'discrimation': 'discrimination',
+ 'descrimation': 'discrimination',
+ 'indiscrimination': 'discrimination',
+ 'discrimnation': 'discrimination',
+ 'discsimination': 'discrimination',
+ 'desrimination': 'discrimination',
+ 'discimination': 'discrimination',
+ 'discreminations': 'discrimination',
+ 'discrmination': 'discrimination',
+ 'dicrimination': 'discrimination',
+ 'descriminations': 'discrimination',
+ 'discriminationâ': 'discrimination',
+ 'discrimations': 'discrimination',
+ 'crimination': 'discrimination',
+ 'discreminating': 'discrimination',
+ 'discrimonation': 'discrimination',
+ 'rimination': 'discrimination',
+ 'discrimantion': 'discrimination',
+ 'discrimanation': 'discrimination',
+ 'descreminations': 'discrimination',
+ 'decimation': 'discrimination',
+ 'dimination': 'discrimination',
+ 'desinmination': 'discrimination',
+ 'discremation': 'discrimination',
+ 'discrminations': 'discrimination',
+ 'discriminatrion': 'discrimination',
+ 'disciminations': 'discrimination',
+ 'discremaination': 'discrimination',
+ 'discrination': 'discrimination',
+ 'descrimanation': 'discrimination',
+ 'discrimating': 'discrimination',
+ '25': '25',
+ '44': '44',
+ 'rights': 'right',
+ 'right': 'right',
+ 'ight': 'right',
+ 'righ': 'right',
+ 'rigjhts': 'right',
+ 'rightist': 'right',
+ 'wright': 'right',
+ 'raight': 'right',
+ 'rig': 'right',
+ 'rigtht': 'right',
+ 'to': 'to',
+ 'religious': 'religious',
+ 'religiously': 'religious',
+ 'religous': 'religious',
+ 'religios': 'religious',
+ 'religius': 'religious',
+ 'relious': 'religious',
+ 'relgious': 'religious',
+ 'religeous': 'religious',
+ 'irreligious': 'religious',
+ 'regious': 'religious',
+ 'relogious': 'religious',
+ 'religio': 'religious',
+ 'religiuos': 'religious',
+ 'religiou': 'religious',
+ 'releigious': 'religious',
+ 'relagious': 'religious',
+ 'religiaos': 'religious',
+ 'religioun': 'religious',
+ 'religiom': 'religious',
+ 'reglgious': 'religious',
+ 'religior': 'religious',
+ 'relligious': 'religious',
+ 'reliegios': 'religious',
+ 'religioes': 'religious',
+ 'regligious': 'religious',
+ 'religiour': 'religious',
+ 'unreligious': 'religious',
+ 'relugious': 'religious',
+ 'religtious': 'religious',
+ 'rreligiou': 'religious',
+ 'reliegeous': 'religious',
+ 'freedom': 'freedom',
+ 'freedoms': 'freedom',
+ 'freedon': 'freedom',
+ 'freedfrom': 'freedom',
+ 'justice': 'justice',
+ 'injustice': 'justice',
+ 'injustices': 'justice',
+ 'justices': 'justice',
+ 'unjustice': 'justice',
+ 'joustice': 'justice',
+ 'justoce': 'justice',
+ 'justivce': 'justice',
+ 'iinjustice': 'justice',
+ 'justis': 'justice',
+ 'justiceof': 'justice',
+ 'justce': 'justice',
+ 'injusties': 'justice',
+ 'injusticed': 'justice',
+ 'jusctice': 'justice',
+ 'intestate': 'intestate',
+ 'interstate': 'intestate',
+ 'testament': 'testamentary',
+ 'testamentary': 'testamentary',
+ 'parents': 'parent',
+ 'parent': 'parent',
+ 'parents”': 'parent',
+ 'parrents': 'parent',
+ 'arent': 'parent',
+ 'parens': 'parent',
+ 'parents’': 'parent',
+ 'parients': 'parent',
+ 'partents': 'parent',
+ 'paarents': 'parent',
+ 'relationship': 'relationship',
+ 'relationships': 'relationship',
+ 'releationship': 'relationship',
+ 'reletionship': 'relationship',
+ 'relationhsip': 'relationship',
+ 'relaltionship': 'relationship',
+ 'relatioships': 'relationship'}
+
+keywords = ['inheritance',
+ 'marriage',
+ 'succession',
+ 'divorce',
+ 'maintenance',
+ 'gifts',
+ 'hiba',
+ 'custody',
+ 'guardian',
+ 'ward',
+ 'shariat',
+ 'quran',
+ 'personal law',
+ 'article 14',
+ 'constitution',
+ 'gender',
+ 'equality',
+ 'adoption',
+ 'child',
+ 'gender discrimination',
+ 'article 25',
+ 'article 44',
+ 'right to religious freedom',
+ 'gender justice',
+ 'intestate succession',
+ 'testamentary succession',
+ 'parent child relationship']
+
+# Load the data from a JSON file into a Pandas DataFrame
+fname = 'big_email_data_v5'
+data_pdfs = pd.read_json("/home/users/kinjals/work_dir/master_cleaned_with_sent.json")
+
+# Count the occurrences of each unique response in the 'Final Text' column
+counts_pdfs = data_pdfs['Final Text'].value_counts()
+unique_responses_pdfs = list(counts_pdfs.index)
+
+# Display the number of unique responses
+print(len(unique_responses_pdfs))
+
+# Create a DataFrame to store enriched data with keywords
+enriched_dataframe_pdfs = pd.DataFrame(columns=['response', 'counts'] + keywords + ['keywords'])
+
+# Initialize lists to store processed data
+word_list = []
+v = []
+file_name = []
+
+# Iterate through the list of unique responses
+for sentence in tqdm(unique_responses_pdfs):
+    word_list = []
+    
+    # Remove punctuation from the sentence
+    translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+    new_sentence = sentence.translate(translator)
+    
+    # Split the sentence into words
+    words = new_sentence.split()
+    
+    # Iterate through the words in the sentence
+    for word in words:
+        # Remove punctuation from each word
+        word = word.strip(string.punctuation)
+        
+        # Check if the word is not empty after removing punctuation
+        if word:
+            # Check if the word is in the spell correction dictionary
+            if word in spell_correction.keys():
+                word_list.append(spell_correction[word])
+    
+    # Remove duplicate words and handle specific cases
+    word_list = set(word_list)
+    if 'article' in word_list:
+        intersection = {'25', '44', '14'}.intersection(word_list)
+        for new_word in intersection:
+            word_list.add(f'article {new_word}')
+            word_list.remove(new_word)
+        word_list.remove('article')
+    if 'gender' in word_list:
+        intersection = {'discrimination', 'justice'}.intersection(word_list)
+        for new_word in intersection:
+            word_list.add(f'gender {new_word}')
+            word_list.remove(new_word)
+    if 'parent' in word_list:
+        if 'child' in word_list and 'relationship' in word_list:
+            word_list.add('parent child relationship')
+            word_list.remove('relationship')
+        word_list.remove('parent')
+    if 'succession' in word_list:
+        intersection = {'intestate', 'testamentary'}.intersection(word_list)
+        for new_word in intersection:
+            word_list.add(f'{new_word} succession')
+            word_list.remove(new_word)
+    if 'religious' in word_list:
+        if 'freedom' in word_list or 'right' in word_list:
+            word_list.add('right to religious freedom')
+        word_list.remove('religious')
+    if 'personal' in word_list:
+        if 'personal law' in sentence:
+            word_list.add('personal law')
+        word_list.remove('personal')
+        if 'law' in word_list:
+            word_list.remove('law')
+    
+    # Check the presence of each keyword in the processed word list
+    yn = []
+    for k in keywords:
+        if k in word_list:
+            yn.append(1)
+        else:
+            yn.append(0)
+    
+    # Retrieve verdict and filename for the current sentence
+    verdict = list(data_pdfs.loc[data_pdfs['Final Text'] == sentence, 'Verdict'])[0]
+    fn = list(data_pdfs.loc[data_pdfs['Final Text'] == sentence, 'fname'])[0]
+    v.append(verdict)
+    file_name.append(fn)
+    
+    # Add the processed data to the DataFrame
+    enriched_dataframe_pdfs.loc[len(enriched_dataframe_pdfs.index)] = [sentence, counts_pdfs[sentence]] + yn + [' '.join(word_list)]
+
+# Add verdict and filename columns to the DataFrame
+enriched_dataframe_pdfs['verdict'] = v
+enriched_dataframe_pdfs['file_name'] = file_name
+
+# Display the enriched DataFrame
+print(enriched_dataframe_pdfs)
+
+# Save the enriched DataFrame to a JSON file
+enriched_dataframe_pdfs.to_json('/home/users/kinjals/work_dir/samples/keyword_match_final.json', indent=4)
