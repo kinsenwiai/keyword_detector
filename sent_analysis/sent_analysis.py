@@ -6,7 +6,8 @@ from collections import defaultdict
 import re
 from bs4 import BeautifulSoup
 import fasttext
-
+from collections import Counter
+from engine import Model
 def load_data(json_path):
     """
     Load data from a JSON file into a Pandas DataFrame.
@@ -105,10 +106,8 @@ def main():
     - Processes the data for translation and sentiment analysis.
     - Outputs the processed data to a JSON file.
     """
-
     # Specify the path to your JSON file
     json_file_path = "/home/users/kinjals/work_dir/check/_scratchj_ehealth_Education_raw_data_pendrives_drive2_NO NAME_21.08.2023_20230821161427.pdf.json"
-
     # Open the file and load its content
     with open(json_file_path, 'r') as file:
         data = json.load(file)
@@ -123,15 +122,11 @@ def main():
     df['text']=l2
     big_email_data=df
     clean_email_text = clean_text(list(df['text']))
-    #%cd "IndicLID/Inference"
     big_email_data["Cleaned Text"] = clean_email_text
     os.chdir("/home/users/kinjals/work_dir/IndicLID/Inference/ai4bharat")
-    print(os.getcwd())
-    #from IndicLID import IndicLID
     IndicLID_model = IndicLID(input_threshold = 0.5, roman_lid_threshold = 0.6)
     batch_size = 1
     languages = []
-
     for i in tqdm(clean_email_text):
         outputs = IndicLID_model.batch_predict([i], batch_size)
         languages.append(outputs[0][1])
@@ -187,22 +182,19 @@ def main():
     | Urdu (Latin script) | urd_Latn |  
     | Other | other |
     """
-
     lang_arr = lang_str.split("|")
     lang_arr = lang_arr[:-1]
     lang_map = dict()
     for i in range(len(lang_arr)//3):
         lang = lang_arr[3*i+1]
         lang_code = lang_arr[3*i+2]
-    #     print(lang, lang_code)
         lang_map[lang_code.strip()] = lang.strip()
     lang_from_code = []
-
     for i in big_email_data["Language"]:
         lang_from_code.append(lang_map[i])
     big_email_data["Original Language"] = lang_from_code
 
-    from engine import Model
+    
 
     model = Model("/scratchj/ehealth/Education/models/indic-en-preprint/fairseq_model", model_type="fairseq")
     languages = big_email_data["Language"]
@@ -217,15 +209,11 @@ def main():
         else:
             text = clean_feedback_text[idx]
             src_lang = languages[idx]
-            
             N = 25  # You can change this value to the desired number of words per chunk
-
             # Split the sentence into words
             words = text.split()
-
             # Initialize an empty list to store the smaller chunks
             chunks = []
-
             # Loop through the words and group them into chunks of N words each
             for i in range(0, len(words), N):
                 chunk = " ".join(words[i:i+N])
@@ -248,8 +236,6 @@ def main():
     big_email_data["Final Text"] = outputs
     device = torch.device('cuda') 
     model = CrossEncoder('cross-encoder/nli-deberta-base', device=device)
-
-
     ucc_hypotheses = ["civil code is good",
                     "civil code is beneficial",
                     "support civil code",
@@ -273,7 +259,6 @@ def main():
     text = list(big_email_data["Final Text"])
     big_labels_list = []
     cache = dict()
-
     for sentence in tqdm(text):
         if sentence:
             sentence = "".join(sentence)
@@ -294,16 +279,12 @@ def main():
             big_labels_list.append(labels)
         else:
             big_labels_list.append(None)
-    from collections import Counter
-
     both_list = []
     entail_list = []
     contradict_list = []
     neutral_list = []
     decision = []
-
     decision_mapping = dict()
-    # cleaned_review_text = list(cleaned_review_text)
     text = list(text)
     for idx, label in enumerate(big_labels_list):
         if text[idx]:
